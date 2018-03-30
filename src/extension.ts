@@ -1,8 +1,6 @@
 'use strict';
 
-import { window, commands, Disposable, ExtensionContext } from 'vscode';
-
-const undoOptions = { undoStopBefore: false, undoStopAfter: true };
+import { window, Range, Position, Selection, Disposable, ExtensionContext, TextEditor } from 'vscode';
 
 export function activate(context: ExtensionContext) {
 
@@ -15,55 +13,47 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(controller);
 }
 
-class CursorMoveCommand {
-
-    constructor(private to: string, private by?: string) {
-    }
-
-    public createCommand(args?: any) {
-        let cursorMoveArgs: any = {
-            to: this.to,
-            by: this.by,
-            value: args.repeat || 1,
-            select: !!args.isVisual
-        }
-        return {
-            commandId: 'cursorMove',
-            args: cursorMoveArgs
-        };
-    }
-}
-
 class Spacer {
-    public space() {
-        const editor = window.activeTextEditor;
-        let moveBy = false;
 
-        if (! editor) {
-            return;
-        }
+    public space(editor: TextEditor) {
+        let selections = editor.selections;
+        let document = editor.document;
+        let shrink = false;
 
-        editor.selections.map(selection => {
-            let pos = selection.active;
-            let line = editor.document.lineAt(pos.line).text;
-            let before = line.slice(Math.max(pos.character - 2, 0), pos.character);
-            let after = line.slice(pos.character, pos.character + 2);
+        editor.edit(edit => {
 
-            if (before === '{{' && after === '}}') {
-                editor.edit(edit => {
-                    edit.insert(pos, '  ');
-                }, undoOptions);                
+            for (let i = 0; i < selections.length; i++) {
+                let start = selections[i].start;
+                let selected = document.getText(new Range(selections[i].start, selections[i].end));
 
-                moveBy = { to: 'left', by: 'character' }
+                let first = document.getText(new Range(
+                    start,
+                    new Position(start.line, start.character + 1)
+                ));
+                let before = document.getText(new Range(
+                    new Position(start.line, Math.max(start.character - 2, 0)), 
+                    start
+                ));
+
+                if (before === '{{' && first !== ' ') {                
+                    edit.replace(selections[i], ' ' + selected + ' ');
+                    shrink = true;
+                }
             }
-            
-            return selection;
-        });
+        }, { undoStopBefore: false, undoStopAfter: true })
         
-        if (moveBy) {
-            commands.executeCommand('cursorMove', moveBy)
+        .then(success => {
+            if (success && shrink) {
+                editor.selections = editor.selections.map(selection => {
+                    return new Selection(
+                        new Position(selection.start.line, selection.start.character + 1),
+                        new Position(selection.end.line, Math.max(selection.end.character - 1, 0))
+                    );
+                });
 
-        }
+                shrink = false;
+            }
+        });
     }
 
     dispose() {
@@ -86,7 +76,11 @@ class SpacerController {
     }
 
     private onEvent() {
-        this.spacer.space();
+        const editor = window.activeTextEditor;
+
+        if (editor) {
+            this.spacer.space(editor);
+        }
     }
 
     public dispose() {
