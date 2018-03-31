@@ -4,6 +4,7 @@
     "description": "Automatically adds spaces in Laravel blade template tags",
     "version": "0.0.1",
     "publisher": "austenc",
+    "repository": "https://github.com/austenc/vscode-blade-spacer",
     "engines": {
         "vscode": "^1.21.0"
     },
