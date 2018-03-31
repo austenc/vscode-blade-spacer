@@ -5,6 +5,7 @@
     "version": "0.0.1",
     "publisher": "austenc",
     "repository": "https://github.com/austenc/vscode-blade-spacer",
+    "icon": "img/icon.png",
     "engines": {
         "vscode": "^1.21.0"
     },
