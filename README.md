@@ -10,8 +10,9 @@ Currently only `{{` and `{!!` tags are supported, but pull requests are always w
 ![Extension Preview](img/preview.gif)
 
 ## Known Issues
-> **Warning!**  Currently only the regular `{{` tag works with selections
-
+> **Currently only the regular `{{` tag works with selections**
+ - Brace matching / end brace does not work inside quotes (working on this)
+ - Undo sometimes acts strangely when wrapping multiple selections
 
 ## Release Notes
 
