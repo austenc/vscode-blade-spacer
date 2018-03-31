@@ -10,7 +10,7 @@ Currently only `{{` and `{!!` tags are supported, but pull requests are always w
 \!\[Blade Spacer Preview\]\(img/preview.gif\)
 
 ## Known Issues
-> **Warning! Currently only the regular `{{` tag works with selections
+> **Warning!**  Currently only the regular `{{` tag works with selections
 
 
 ## Release Notes
