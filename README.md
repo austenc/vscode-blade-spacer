@@ -7,7 +7,7 @@ For example, typing `{{}}` would automatically make `{{ | }}`.
 
 Currently only `{{` and `{!!` tags are supported, but pull requests are always welcome!
 
-\!\[Blade Spacer Preview\]\(img/preview.gif\)
+![Extension Preview](img/preview.gif)
 
 ## Known Issues
 > **Warning!**  Currently only the regular `{{` tag works with selections
