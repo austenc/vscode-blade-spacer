@@ -1,22 +1,28 @@
-# laravel-blade-spacer
+# Laravel Blade Spacer
 
-A VSCode extension to automatically space blade templating markers. 
-For example, typing `{{}}` would automatically make `{{ | }}`.
+An extension to automatically add spacing to blade templating markers. 
+For example, typing `{{}}` would generate `{{  }}`.
 
 ## Features
-
-Currently only `{{` and `{!!` tags are supported, but pull requests are always welcome!
+Supports the following tags:
+- `{{  }}`
+- `{{{  }}}`
+- `{!!  !!}`
+- `{{--  --}}`
 
 ![Extension Preview](img/preview.gif)
 
 ## Known Issues
-> **Currently only the regular `{{` tag works with selections**
- - Brace matching / end brace does not work inside quotes (working on this)
- - Undo sometimes acts strangely when wrapping multiple selections
+ - Wrapping selected text with `{!!  !!}` and `{{--  --}}` tags doesn't work yet. 
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 1.0.0
+- Improved support for multi cursor and selection wrapping
+- Fixed multi cursor undo problem
+- Added support for triple brace syntax
+- Added support for comment syntax
 
 ### 0.1.0
-Initial version supporting `{{` and `{!!` tags
+- Initial version supporting `{{` and `{!!` tags. Buggy, but it's a start!
+
