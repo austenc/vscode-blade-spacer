@@ -1,11 +1,8 @@
 'use strict';
 
-import { window, Range, Position, Selection, Disposable, ExtensionContext, TextEditor, TextDocument } from 'vscode';
+import { window, SnippetString, Range, Position, Selection, Disposable, ExtensionContext, TextEditor, TextDocument } from 'vscode';
 
 export function activate(context: ExtensionContext) {
-
-    console.log('The Laravel Blade Spacer extension is now active!');
-
     let spacer = new Spacer();
     let controller = new SpacerController(spacer);
 
@@ -43,40 +40,56 @@ class Spacer {
         let selections = editor.selections;
         let document = editor.document;
         let tagType = '';
-        let offsetL = 1;
-        let offsetR = 1;
 
-        editor.edit(edit => {
+        for (let i = 0; i < selections.length; i++) {
 
-            for (let i = 0; i < selections.length; i++) {
-
-                let s = this.measurements(document, selections[i]);
-
-                if (s.twoBefore === '{{' && s.firstChar !== ' ') {                
-                    edit.replace(selections[i], ' ' + s.selected + ' ');
-                    tagType = 'double';
-                }
-
-                if (s.threeBefore === '{!!' && s.firstChar !== ' ') {
-                    edit.replace(selections[i], ' ' + s.selected + ' !!');
-                    tagType = 'unescaped';
-                    offsetR = 3;
-                }
+            
+            let s = this.measurements(document, selections[i]);
+            if (s.twoBefore === '{{' && s.firstChar !== ' ') {
+                tagType = 'double';
             }
-        }, { undoStopBefore: false, undoStopAfter: false })
-        
-        .then(success => {
-            if (success && tagType.length) {
-                editor.selections = editor.selections.map(selection => {
-                    return new Selection(
-                        new Position(selection.start.line, selection.start.character + offsetL),
-                        new Position(selection.end.line, Math.max(selection.end.character - offsetR, 0))
-                    );
-                });
 
-                tagType = '';
+            if (s.fourBefore === '{{ {' && s.firstChar !== ' ') {
+                tagType = 'triple';
             }
-        });
+
+            if (s.threeBefore === '{!!' && s.firstChar !== ' ') {
+                tagType = 'unescaped';
+            }
+
+            if (s.fourBefore === '{{ -' && s.firstChar === ' ') {
+                tagType = 'comment';
+            }
+        }
+
+        if (tagType === 'double') {
+            let allRanges = selections.map(value => {
+                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character + 2);
+            });
+            editor.insertSnippet(new SnippetString("{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}$0"), allRanges);
+        }
+
+        if (tagType === 'triple') {
+            let allRanges = selections.map(value => {
+                return new Range(value.start.line, value.start.character - 4, value.end.line, value.end.character + 4);
+            });
+            editor.insertSnippet(new SnippetString("{{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}}$0"), allRanges);
+        }
+
+        if (tagType === 'unescaped') {
+            let allRanges = selections.map(value => {
+                return new Range(value.start.line, value.start.character - 3, value.end.line, value.end.character + 1);
+            });
+            editor.insertSnippet(new SnippetString("{!! ${1:${TM_SELECTED_TEXT/[!\{\}\ ]/$1/g}} !!}$0"), allRanges);
+        }
+
+        if (tagType === 'comment') {
+            let allRanges = selections.map(value => {
+                return new Range(value.start.line, value.start.character - 4, value.end.line, value.end.character + 3);
+            });
+            editor.insertSnippet(new SnippetString("{{-- ${1:${TM_SELECTED_TEXT/[\-\{\}\ ]/$1/g}} --}}$0"), allRanges, {undoStopBefore: false, undoStopAfter: true});
+        }
+
     }
 
     dispose() {
