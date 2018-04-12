@@ -2,7 +2,7 @@
     "name": "laravel-blade-spacer",
     "displayName": "Laravel Blade Spacer",
     "description": "Automatically adds spaces in Laravel blade template tags",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "publisher": "austenc",
     "repository": "https://github.com/austenc/vscode-blade-spacer",
     "icon": "img/icon.png",
