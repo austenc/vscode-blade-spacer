@@ -32,7 +32,17 @@ class Spacer {
             fourBefore: document.getText(new Range(
                 new Position(selection.start.line, Math.max(selection.start.character - 4, 0)),
                 selection.start
-            ))            
+            )),
+            charAfter: document.getText(new Range(
+                selection.end,
+                new Position(selection.end.line, selection.end.character + 1),
+            )),
+            twoAfter: document.getText(new Range(
+                selection.end,
+                new Position(selection.end.line, selection.end.character + 2),
+            )),
+            
+
         };
     }
 
@@ -40,13 +50,17 @@ class Spacer {
         let selections = editor.selections;
         let document = editor.document;
         let tagType = '';
-
-        for (let i = 0; i < selections.length; i++) {
-
+        let offsetEnd = 2;
+        
+        for (let i = 0; i < selections.length; i++) {    
+            
             
             let s = this.measurements(document, selections[i]);
             if (s.twoBefore === '{{' && s.firstChar !== ' ') {
-                tagType = 'double';
+                tagType = 'double';                
+                if (s.twoAfter !== '}}') {
+                    offsetEnd = 0;
+                }
             }
 
             if (s.fourBefore === '{{ {' && s.firstChar !== ' ') {
@@ -55,6 +69,11 @@ class Spacer {
 
             if (s.threeBefore === '{!!' && s.firstChar !== ' ') {
                 tagType = 'unescaped';
+                offsetEnd = 1;
+
+                if (s.charAfter !== '}') {
+                    offsetEnd = 0;
+                }
             }
 
             if (s.fourBefore === '{{ -' && s.firstChar === ' ') {
@@ -64,7 +83,14 @@ class Spacer {
 
         if (tagType === 'double') {
             let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character + 2);
+                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character + offsetEnd);
+            });
+            editor.insertSnippet(new SnippetString("{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}$0"), allRanges);
+        }
+
+        if (tagType === 'doubleWithoutEnd') {
+            let allRanges = selections.map(value => {
+                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character);
             });
             editor.insertSnippet(new SnippetString("{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}$0"), allRanges);
         }
@@ -78,7 +104,7 @@ class Spacer {
 
         if (tagType === 'unescaped') {
             let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 3, value.end.line, value.end.character + 1);
+                return new Range(value.start.line, value.start.character - 3, value.end.line, value.end.character + offsetEnd);
             });
             editor.insertSnippet(new SnippetString("{!! ${1:${TM_SELECTED_TEXT/[!\{\}\ ]/$1/g}} !!}$0"), allRanges);
         }

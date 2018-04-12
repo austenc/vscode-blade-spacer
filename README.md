@@ -17,6 +17,9 @@ Supports the following tags:
 
 ## Release Notes
 
+### 1.0.1
+- Added workaround for braces not matching when a trailing quote or angle bracket exists - see Microsoft/vscode#35197
+
 ### 1.0.0
 - Improved support for multi cursor and selection wrapping
 - Fixed multi cursor undo problem
