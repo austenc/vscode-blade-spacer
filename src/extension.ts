@@ -56,7 +56,7 @@ class Spacer {
             
             
             let s = this.measurements(document, selections[i]);
-            if (s.twoBefore === '{{' && s.firstChar !== ' ') {
+            if (s.twoBefore === '{{' && s.firstChar !== ' ' && s.twoAfter !== '--') {
                 tagType = 'double';                
                 if (s.twoAfter !== '}}') {
                     offsetEnd = 0;

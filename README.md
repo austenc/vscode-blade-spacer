@@ -17,6 +17,9 @@ Supports the following tags:
 
 ## Release Notes
 
+### 1.0.2
+- Fixed an issue that caused extraneous brackets when cursor at the beginning of a comment - #2
+
 ### 1.0.1
 - Added workaround for braces not matching when a trailing quote or angle bracket exists - see Microsoft/vscode#35197
 
