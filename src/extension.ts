@@ -25,7 +25,6 @@ export function activate(context: ExtensionContext) {
       const triggers = ['{}', '!', '-', '{']
       e.contentChanges.forEach(change => {
         if (triggers.indexOf(change.text) !== -1) {
-          console.log('triggered')
           spacer.space(e.document)
         }
       })
@@ -34,26 +33,6 @@ export function activate(context: ExtensionContext) {
 }
 
 class Spacer {
-  public measurements(document: TextDocument, selection: Selection) {
-    return {
-      start: selection.start,
-      end: selection.end,
-      selected: document.getText(
-        new Range(
-          selection.start.translate(0, 1),
-          selection.end.translate(0, 1)
-        )
-      ),
-      firstChar: document.getText(this.textAt(selection.start, 0, 1)),
-      twoBefore: document.getText(this.textAt(selection.start, -1, 1)),
-      threeBefore: document.getText(this.textAt(selection.start, -2, 1)),
-      fourBefore: document.getText(this.textAt(selection.start, -3, 1)),
-      fiveBefore: document.getText(this.textAt(selection.start, -4, 1)),
-      charAfter: document.getText(this.textAt(selection.end, 1, 2)),
-      twoAfter: document.getText(this.textAt(selection.end, 1, 3))
-    }
-  }
-
   protected textAt(anchor: Position, startOffset: number, endOffset: number) {
     let start = 0
     if (anchor.character + startOffset > -1) {
@@ -70,10 +49,16 @@ class Spacer {
     }
 
     let selections = editor.selections
-    let tagType = ''
+
+    // loop through selections and with each:
+    // + find the tag type for this selection
+    // + add a range for this selection with a type to an allRanges array
+    // + Finally, insert all the snippets at once AFTER the loop
+
+    let tagType = this.tagType()
 
     selections.forEach(selection => {
-      let s = this.measurements(document, selection)
+      let s = this.tagType(document, selection)
       if (s.twoBefore === '{{' && s.firstChar !== ' ' && s.twoAfter !== '--') {
         tagType = 'double'
       }
@@ -91,18 +76,14 @@ class Spacer {
       }
     })
 
-    console.log(tagType)
-
     if (tagType === 'double') {
       let allRanges = selections.map(value => {
         console.log(
-          document.getText(
-            new Range(
-              value.start.line,
-              value.start.character + 1,
-              value.end.line,
-              value.end.character + 1
-            )
+          new Range(
+            value.start.line,
+            value.start.character + 1,
+            value.end.line,
+            value.end.character + 1
           )
         )
         return new Range(
@@ -112,13 +93,13 @@ class Spacer {
           value.end.character + 1
         )
       })
+      // TODO: fix problem where this is called twice. the process of handling the snippet should only happen once.
+      console.log('inserting snippet')
       editor.insertSnippet(
-        new SnippetString(' ${1:${TM_SELECTED_TEXT/[ ]//g}} $0'),
+        new SnippetString(' ${1:${TM_SELECTED_TEXT}} $0'),
         allRanges
       )
-    }
-
-    if (tagType === 'triple') {
+    } else if (tagType === 'triple') {
       let allRanges = selections.map(value => {
         return new Range(
           value.start.line,
@@ -131,9 +112,7 @@ class Spacer {
         new SnippetString('{ ${1:${TM_SELECTED_TEXT/[ {}]//g}} }$0'),
         allRanges
       )
-    }
-
-    if (tagType === 'unescaped') {
+    } else if (tagType === 'unescaped') {
       let allRanges = selections.map(value => {
         return new Range(
           value.start.line,
@@ -146,20 +125,8 @@ class Spacer {
         new SnippetString('! ${1:${TM_SELECTED_TEXT/[!{} ]/$1/g}} !!$0'),
         allRanges
       )
-    }
-
-    if (tagType === 'comment') {
+    } else if (tagType === 'comment') {
       let allRanges = selections.map(value => {
-        console.log(
-          document.getText(
-            new Range(
-              value.start.line,
-              value.start.character - 2,
-              value.end.line,
-              value.end.character + 2
-            )
-          )
-        )
         return new Range(
           value.start.line,
           value.start.character - 2,
@@ -172,6 +139,46 @@ class Spacer {
         allRanges,
         { undoStopBefore: false, undoStopAfter: true }
       )
+    }
+  }
+
+  public tagType(document: TextDocument, selection: Selection) {
+    let chars = {
+      start: selection.start,
+      end: selection.end,
+      selected: document.getText(
+        new Range(
+          selection.start.translate(0, 1),
+          selection.end.translate(0, 1)
+        )
+      ),
+      firstChar: document.getText(this.textAt(selection.start, 0, 1)),
+      twoBefore: document.getText(this.textAt(selection.start, -1, 1)),
+      threeBefore: document.getText(this.textAt(selection.start, -2, 1)),
+      fourBefore: document.getText(this.textAt(selection.start, -3, 1)),
+      fiveBefore: document.getText(this.textAt(selection.start, -4, 1)),
+      charAfter: document.getText(this.textAt(selection.end, 1, 2)),
+      twoAfter: document.getText(this.textAt(selection.end, 1, 3))
+    }
+
+    if (
+      chars.twoBefore === '{{' &&
+      chars.firstChar !== ' ' &&
+      chars.twoAfter !== '--'
+    ) {
+      return 'double'
+    }
+
+    if (chars.fourBefore === '{{ {' && chars.firstChar !== ' ') {
+      return 'triple'
+    }
+
+    if (chars.threeBefore === '{!!' && chars.firstChar !== ' ') {
+      return 'unescaped'
+    }
+
+    if (chars.fiveBefore === '{{ --' && chars.firstChar === '-') {
+      return 'comment'
     }
   }
 }
