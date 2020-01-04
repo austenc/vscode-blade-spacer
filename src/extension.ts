@@ -25,6 +25,7 @@ export function activate(context: ExtensionContext) {
       const triggers = ['{}', '!', '-', '{']
       e.contentChanges.forEach(change => {
         if (triggers.indexOf(change.text) !== -1) {
+          console.log('triggered')
           spacer.space(e.document)
         }
       })
@@ -47,6 +48,7 @@ class Spacer {
       twoBefore: document.getText(this.textAt(selection.start, -1, 1)),
       threeBefore: document.getText(this.textAt(selection.start, -2, 1)),
       fourBefore: document.getText(this.textAt(selection.start, -3, 1)),
+      fiveBefore: document.getText(this.textAt(selection.start, -4, 1)),
       charAfter: document.getText(this.textAt(selection.end, 1, 2)),
       twoAfter: document.getText(this.textAt(selection.end, 1, 3))
     }
@@ -69,15 +71,11 @@ class Spacer {
 
     let selections = editor.selections
     let tagType = ''
-    let offsetEnd = 2
 
     selections.forEach(selection => {
       let s = this.measurements(document, selection)
       if (s.twoBefore === '{{' && s.firstChar !== ' ' && s.twoAfter !== '--') {
         tagType = 'double'
-        if (s.twoAfter !== '}}') {
-          offsetEnd = 0
-        }
       }
 
       if (s.fourBefore === '{{ {' && s.firstChar !== ' ') {
@@ -86,14 +84,9 @@ class Spacer {
 
       if (s.threeBefore === '{!!' && s.firstChar !== ' ') {
         tagType = 'unescaped'
-        offsetEnd = 1
-
-        if (s.charAfter !== '}') {
-          offsetEnd = 0
-        }
       }
 
-      if (s.fourBefore === '{{ -' && s.firstChar === ' ') {
+      if (s.fiveBefore === '{{ --' && s.firstChar === '-') {
         tagType = 'comment'
       }
     })
@@ -101,6 +94,31 @@ class Spacer {
     console.log(tagType)
 
     if (tagType === 'double') {
+      let allRanges = selections.map(value => {
+        console.log(
+          document.getText(
+            new Range(
+              value.start.line,
+              value.start.character + 1,
+              value.end.line,
+              value.end.character + 1
+            )
+          )
+        )
+        return new Range(
+          value.start.line,
+          value.start.character + 1,
+          value.end.line,
+          value.end.character + 1
+        )
+      })
+      editor.insertSnippet(
+        new SnippetString(' ${1:${TM_SELECTED_TEXT/[ ]//g}} $0'),
+        allRanges
+      )
+    }
+
+    if (tagType === 'triple') {
       let allRanges = selections.map(value => {
         return new Range(
           value.start.line,
@@ -110,71 +128,51 @@ class Spacer {
         )
       })
       editor.insertSnippet(
-        new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{{|}}| }}]//g}} }}$0'),
+        new SnippetString('{ ${1:${TM_SELECTED_TEXT/[ {}]//g}} }$0'),
         allRanges
       )
     }
 
-    // if (tagType === 'doubleWithoutEnd') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 2,
-    //       value.end.line,
-    //       value.end.character
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{} ]/$1/g}} }}$0'),
-    //     allRanges
-    //   )
-    // }
+    if (tagType === 'unescaped') {
+      let allRanges = selections.map(value => {
+        return new Range(
+          value.start.line,
+          value.start.character,
+          value.end.line,
+          value.end.character + 1
+        )
+      })
+      editor.insertSnippet(
+        new SnippetString('! ${1:${TM_SELECTED_TEXT/[!{} ]/$1/g}} !!$0'),
+        allRanges
+      )
+    }
 
-    // if (tagType === 'triple') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 4,
-    //       value.end.line,
-    //       value.end.character + 4
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('{{{ ${1:${TM_SELECTED_TEXT/[{} ]/$1/g}} }}}$0'),
-    //     allRanges
-    //   )
-    // }
-
-    // if (tagType === 'unescaped') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 3,
-    //       value.end.line,
-    //       value.end.character + offsetEnd
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[!{} ]/$1/g}} !!}$0'),
-    //     allRanges
-    //   )
-    // }
-
-    // if (tagType === 'comment') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 4,
-    //       value.end.line,
-    //       value.end.character + 3
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/[-{} ]/$1/g}} --}}$0'),
-    //     allRanges,
-    //     { undoStopBefore: false, undoStopAfter: true }
-    //   )
-    // }
+    if (tagType === 'comment') {
+      let allRanges = selections.map(value => {
+        console.log(
+          document.getText(
+            new Range(
+              value.start.line,
+              value.start.character - 2,
+              value.end.line,
+              value.end.character + 2
+            )
+          )
+        )
+        return new Range(
+          value.start.line,
+          value.start.character - 2,
+          value.end.line,
+          value.end.character + 2
+        )
+      })
+      editor.insertSnippet(
+        new SnippetString('-- ${1:${TM_SELECTED_TEXT/[-{} ]/$1/g}} --$0'),
+        allRanges,
+        { undoStopBefore: false, undoStopAfter: true }
+      )
+    }
   }
 }
 
