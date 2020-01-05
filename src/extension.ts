@@ -1,6 +1,4 @@
-'use strict'
-
-import * as vscode from 'vscode'
+'use strict';
 
 import {
   window,
@@ -9,180 +7,100 @@ import {
   Range,
   Position,
   Selection,
-  Disposable,
   ExtensionContext,
-  TextEditor,
   TextDocument,
-  Event,
-  TextDocumentChangeEvent
-} from 'vscode'
+  TextEditor
+} from 'vscode';
+
+// TODO:
+// - fix multiple instances on single line multi selection bug (multiple selections?)
+// - split spacer into its own file?
 
 export function activate(context: ExtensionContext) {
-  let spacer = new Spacer()
+  const spacer = new Spacer();
+  const triggers = ['{}', '!', '-', '{'];
 
   context.subscriptions.push(
     workspace.onDidChangeTextDocument(e => {
-      const triggers = ['{}', '!', '-', '{']
+      // Make sure we have an editor to work with
+      const editor = window.activeTextEditor;
+      if (!editor) {
+        return;
+      }
+
+      let ranges: Array<Range> = [];
+      let tagType: string = '';
       e.contentChanges.forEach(change => {
         if (triggers.indexOf(change.text) !== -1) {
-          spacer.space(e.document)
+          // find a matching selection to where this change started
+          let selection = spacer.matchingSelection(editor, change.range.start);
+          if (selection) {
+            tagType = spacer.tagType(e.document, selection);
+            let range = spacer.rangeForTagType(selection, tagType);
+            if (range) {
+              ranges.push(range);
+            }
+          }
         }
-      })
+      });
+
+      // If we found a tag type, do the snippet replacement
+      if (tagType !== '') {
+        console.log('Total Ranges: ' + ranges.length);
+        spacer.spaceForTag(editor, ranges, tagType);
+      }
     })
-  )
+  );
 }
 
 class Spacer {
-  protected textAt(anchor: Position, startOffset: number, endOffset: number) {
-    let start = 0
+  public textAt(anchor: Position, startOffset: number, endOffset: number) {
+    let start = 0;
     if (anchor.character + startOffset > -1) {
-      start = startOffset
+      start = startOffset;
     }
-    return new Range(anchor.translate(0, start), anchor.translate(0, endOffset))
+    return new Range(
+      anchor.translate(0, start),
+      anchor.translate(0, endOffset)
+    );
   }
 
-  protected rangeForTagType(selection: Selection, tagType: string) {
+  public rangeForTagType(selection: Selection, tagType: string) {
     if (tagType === 'double') {
       return new Range(
         selection.start.line,
         selection.start.character + 1,
         selection.end.line,
         selection.end.character + 1
-      )
+      );
     } else if (tagType === 'triple') {
       return new Range(
         selection.start.line,
         selection.start.character - 1,
         selection.end.line,
         selection.end.character + 3
-      )
+      );
     } else if (tagType === 'unescaped') {
       return new Range(
         selection.start.line,
         selection.start.character,
         selection.end.line,
         selection.end.character + 1
-      )
+      );
     } else if (tagType === 'comment') {
       return new Range(
         selection.start.line,
         selection.start.character - 2,
         selection.end.line,
         selection.end.character + 2
-      )
+      );
     }
 
-    return false
+    return false;
   }
 
-  public space(document: TextDocument) {
-    const editor = window.activeTextEditor
-
-    if (!editor) {
-      return
-    }
-
-    // TODO:
-    // BUGFIX
-    // space is called for EACH change made, so we need to figure out the
-    // selection from the changes
-
-    // PROBLEM if the insertSnippet method is called for each selection individually,
-    // so it messes up multi cursor if you don't do ALL ranges
-
-    // SOLUTIONS?
-    // Prevent it from trying to space unless it's the first one?
-
-    let ranges: Array<Range> = []
-    let tagType: string = ''
-    editor.selections.forEach(selection => {
-      tagType = this.tagType(document, selection)
-      let newRange = this.rangeForTagType(selection, tagType)
-      if (newRange) {
-        ranges.push(newRange)
-      }
-    })
-
-    if (tagType == 'double') {
-      editor.insertSnippet(
-        new SnippetString(' ${1:${TM_SELECTED_TEXT}} $0'),
-        ranges
-      )
-    }
-
-    // loop through selections and with each:
-    // + find the tag type for this selection
-    // + add a range for this selection with a type to an allRanges array
-    // + Finally, insert all the snippets at once AFTER the loop
-
-    //
-
-    //
-
-    // if (tagType === 'double') {
-    //   let allRanges = selections.map(value => {
-    //     console.log(
-    //       new Range(
-    //         value.start.line,
-    //         value.start.character + 1,
-    //         value.end.line,
-    //         value.end.character + 1
-    //       )
-    //     )
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character + 1,
-    //       value.end.line,
-    //       value.end.character + 1
-    //     )
-    //   })
-    //   // TODO: fix problem where this is called twice. the process of handling the snippet should only happen once.
-    //   console.log('inserting snippet')
-    //   editor.insertSnippet(
-    //     new SnippetString(' ${1:${TM_SELECTED_TEXT}} $0'),
-    //     allRanges
-    //   )
-    // } else if (tagType === 'triple') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 1,
-    //       value.end.line,
-    //       value.end.character + 3
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('{ ${1:${TM_SELECTED_TEXT/[ {}]//g}} }$0'),
-    //     allRanges
-    //   )
-    // } else if (tagType === 'unescaped') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character,
-    //       value.end.line,
-    //       value.end.character + 1
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('! ${1:${TM_SELECTED_TEXT/[!{} ]/$1/g}} !!$0'),
-    //     allRanges
-    //   )
-    // } else if (tagType === 'comment') {
-    //   let allRanges = selections.map(value => {
-    //     return new Range(
-    //       value.start.line,
-    //       value.start.character - 2,
-    //       value.end.line,
-    //       value.end.character + 2
-    //     )
-    //   })
-    //   editor.insertSnippet(
-    //     new SnippetString('-- ${1:${TM_SELECTED_TEXT/[-{} ]/$1/g}} --$0'),
-    //     allRanges,
-    //     { undoStopBefore: false, undoStopAfter: true }
-    //   )
-    // }
+  public matchingSelection(editor: TextEditor, start: Position) {
+    return editor.selections.find(selection => selection.start.isEqual(start));
   }
 
   public tagType(document: TextDocument, selection: Selection) {
@@ -196,29 +114,55 @@ class Spacer {
       fiveBefore: document.getText(this.textAt(selection.start, -4, 1)),
       charAfter: document.getText(this.textAt(selection.end, 1, 2)),
       twoAfter: document.getText(this.textAt(selection.end, 1, 3))
-    }
+    };
 
     if (
       chars.twoBefore === '{{' &&
       chars.firstChar !== ' ' &&
       chars.twoAfter !== '--'
     ) {
-      return 'double'
+      return 'double';
     }
 
     if (chars.fourBefore === '{{ {' && chars.firstChar !== ' ') {
-      return 'triple'
+      return 'triple';
     }
 
     if (chars.threeBefore === '{!!' && chars.firstChar !== ' ') {
-      return 'unescaped'
+      return 'unescaped';
     }
 
     if (chars.fiveBefore === '{{ --' && chars.firstChar === '-') {
-      return 'comment'
+      return 'comment';
     }
 
-    return ''
+    return '';
+  }
+
+  public spaceForTag(editor: TextEditor, ranges: Array<Range>, tag: string) {
+    if (tag === 'double') {
+      editor.insertSnippet(
+        new SnippetString(' ${1:${TM_SELECTED_TEXT}} $0'),
+        ranges
+      );
+    } else if (tag === 'triple') {
+      editor.insertSnippet(
+        new SnippetString('{ ${1:${TM_SELECTED_TEXT/[ {}]//g}} }$0'),
+        ranges,
+        { undoStopBefore: false, undoStopAfter: true }
+      );
+    } else if (tag === 'unescaped') {
+      editor.insertSnippet(
+        new SnippetString('! ${1:${TM_SELECTED_TEXT/[!{} ]/$1/g}} !!$0'),
+        ranges
+      );
+    } else if (tag === 'comment') {
+      editor.insertSnippet(
+        new SnippetString('-- ${1:${TM_SELECTED_TEXT/[-{} ]/$1/g}} --$0'),
+        ranges,
+        { undoStopBefore: false, undoStopAfter: true }
+      );
+    }
   }
 }
 
