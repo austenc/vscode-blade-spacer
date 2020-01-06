@@ -28,34 +28,42 @@ export function activate(context: ExtensionContext) {
         return;
       }
 
-      e.contentChanges.forEach(change => {
+      let ranges: Array<Range> = [];
+      let offsets: Array<number> = [];
+
+      // reverse here so we can calculate line offsets
+      e.contentChanges.reverse().forEach(change => {
         if (triggers.indexOf(change.text) !== -1) {
-          const regex = /({{)(.*)(}})/g;
+          const regex = /({{)([^\s].*?)?(}})/;
 
-          console.log(
-            e.document.getText(
-              new Range(
-                change.range.start,
-                e.document.lineAt(change.range.start.line).range.end
-              )
-            )
+          if (!offsets[change.range.start.line]) {
+            offsets[change.range.start.line] = 0;
+          }
+
+          // find the next match after change start)
+          const start = change.range.start.translate(
+            0,
+            offsets[change.range.start.line] - 1
           );
-
-          // find the next match after change start
+          const lineEnd = e.document.lineAt(start.line).range.end;
           const match = regex.exec(
-            e.document.getText(
-              new Range(
-                change.range.start.translate(0, -1),
-                e.document.lineAt(change.range.start.line).range.end
-              )
-            )
+            e.document.getText(new Range(start, lineEnd))
           );
 
           if (match) {
-            console.log(match);
+            let offsetStart = start.translate(0, offsets[start.line]);
+            ranges.push(new Range(start, start.translate(0, match[0].length)));
+            offsets[start.line] += 2;
           }
         }
       });
+
+      if (ranges.length > 0) {
+        editor.insertSnippet(
+          new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
+          ranges
+        );
+      }
     })
   );
 }
