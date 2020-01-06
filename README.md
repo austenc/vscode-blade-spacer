@@ -1,7 +1,6 @@
 # Laravel Blade Spacer
 
 An extension to automatically add spacing to blade templating markers. 
-For example, typing `{{}}` would generate `{{  }}`.
 
 ## Features
 Supports the following tags:
@@ -13,9 +12,15 @@ Supports the following tags:
 ![Extension Preview](img/preview.gif)
 
 ## Known Issues
- - Wrapping selected text with `{!!  !!}` and `{{--  --}}` tags doesn't work yet. 
+ - Wrapping selected text with `{!!  !!}` and `{{--  --}}` tags doesn't work. PR welcomed! 
 
 ## Release Notes
+
+### 2.0.0
+- Dropped support for `{{{ }}}` tags 
+- Improved how extension activates, should be more performant
+- Fixed https://github.com/austenc/vscode-blade-spacer/issues/3
+- Fixed https://github.com/austenc/vscode-blade-spacer/issues/4
 
 ### 1.0.2
 - Fixed an issue that caused extraneous brackets when cursor at the beginning of a comment - #2
