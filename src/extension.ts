@@ -5,15 +5,9 @@ import {
   workspace,
   SnippetString,
   Range,
-  Position,
-  Selection,
   ExtensionContext,
-  TextDocument,
   TextEditor
 } from 'vscode';
-
-// TODO:
-// - change "look before" offset to match tag type
 
 export function activate(context: ExtensionContext) {
   const triggers = ['{}', '!', '-', '{'];
@@ -57,16 +51,14 @@ export function activate(context: ExtensionContext) {
           );
           let lineEnd = e.document.lineAt(start.line).range.end;
           expressions.forEach((expression, index) => {
-            let match = expression.exec(
+            let tag = expression.exec(
               e.document.getText(new Range(start, lineEnd))
             );
 
-            if (match) {
+            if (tag) {
               tagType = index;
-              ranges.push(
-                new Range(start, start.translate(0, match[0].length))
-              );
-              offsets[start.line] += match[1].length;
+              ranges.push(new Range(start, start.translate(0, tag[0].length)));
+              offsets[start.line] += tag[1].length;
             }
           });
         }
