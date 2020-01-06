@@ -5,7 +5,6 @@ An extension to automatically add spacing to blade templating markers.
 ## Features
 Supports the following tags:
 - `{{  }}`
-- `{{{  }}}`
 - `{!!  !!}`
 - `{{--  --}}`
 
