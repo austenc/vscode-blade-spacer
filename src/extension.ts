@@ -13,17 +13,21 @@ import {
 } from 'vscode';
 
 // TODO:
-// - fix multiple instances on single line multi selection bug (multiple selections?)
-// - split spacer into its own file?
+// - change "look before" offset to match tag type
 
 export function activate(context: ExtensionContext) {
-  const spacer = new Spacer();
   const triggers = ['{}', '!', '-', '{'];
+  const expressions = [
+    /({{)([^\s].*?)?(}})/,
+    /({!!)(.*?)?(})/,
+    /({{\s--)(.*?)?(}})/
+  ];
+  const spacer = new Spacer();
+  let tagType: number = -1;
 
   context.subscriptions.push(
     workspace.onDidChangeTextDocument(e => {
-      // Make sure we have an editor to work with
-      const editor = window.activeTextEditor;
+      let editor = window.activeTextEditor;
       if (!editor) {
         return;
       }
@@ -31,44 +35,73 @@ export function activate(context: ExtensionContext) {
       let ranges: Array<Range> = [];
       let offsets: Array<number> = [];
 
-      // reverse here so we can calculate line offsets
+      // changes (per line) come in right-to-left when we need them left-to-right
       e.contentChanges.reverse().forEach(change => {
-        if (triggers.indexOf(change.text) !== -1) {
-          const regex = /({{)([^\s].*?)?(}})/;
+        let charsBefore: number = 1;
 
+        if (triggers.indexOf(change.text) !== -1) {
           if (!offsets[change.range.start.line]) {
             offsets[change.range.start.line] = 0;
           }
 
-          // find the next match after change start)
-          const start = change.range.start.translate(
-            0,
-            offsets[change.range.start.line] - 1
-          );
-          const lineEnd = e.document.lineAt(start.line).range.end;
-          const match = regex.exec(
-            e.document.getText(new Range(start, lineEnd))
-          );
-
-          if (match) {
-            let offsetStart = start.translate(0, offsets[start.line]);
-            ranges.push(new Range(start, start.translate(0, match[0].length)));
-            offsets[start.line] += 2;
+          // some tags need more characters to be matched from the start
+          if (change.text === '!') {
+            charsBefore = 2;
+          } else if (change.text === '-') {
+            charsBefore = 4;
           }
+
+          let start = change.range.start.translate(
+            0,
+            offsets[change.range.start.line] - charsBefore
+          );
+          let lineEnd = e.document.lineAt(start.line).range.end;
+          expressions.forEach((expression, index) => {
+            let match = expression.exec(
+              e.document.getText(new Range(start, lineEnd))
+            );
+
+            if (match) {
+              tagType = index;
+              ranges.push(
+                new Range(start, start.translate(0, match[0].length))
+              );
+              offsets[start.line] += match[1].length;
+            }
+          });
         }
       });
 
       if (ranges.length > 0) {
-        editor.insertSnippet(
-          new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
-          ranges
-        );
+        spacer.replace(editor, tagType, ranges);
+        ranges = [];
+        tagType = -1;
       }
     })
   );
 }
 
-class Spacer {}
+class Spacer {
+  TAG_DOUBLE = 0;
+  TAG_UNESCAPED = 1;
+  TAG_COMMENT = 2;
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+  public replace(editor: TextEditor, tagType: number, ranges: Array<Range>) {
+    if (tagType === this.TAG_DOUBLE) {
+      editor.insertSnippet(
+        new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
+        ranges
+      );
+    } else if (tagType === this.TAG_UNESCAPED) {
+      editor.insertSnippet(
+        new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{}!]//g}} !!}$0'),
+        ranges
+      );
+    } else if (tagType === this.TAG_COMMENT) {
+      editor.insertSnippet(
+        new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/[{}- ]//g}} --}}$0'),
+        ranges
+      );
+    }
+  }
+}
