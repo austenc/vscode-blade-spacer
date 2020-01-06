@@ -105,34 +105,31 @@ class Spacer {
 
   public tagType(document: TextDocument, selection: Selection) {
     let chars = {
-      start: selection.start,
-      end: selection.end,
-      firstChar: document.getText(this.textAt(selection.start, 0, 1)),
+      oneBefore: document.getText(this.textAt(selection.start, 0, 1)),
       twoBefore: document.getText(this.textAt(selection.start, -1, 1)),
       threeBefore: document.getText(this.textAt(selection.start, -2, 1)),
       fourBefore: document.getText(this.textAt(selection.start, -3, 1)),
       fiveBefore: document.getText(this.textAt(selection.start, -4, 1)),
-      charAfter: document.getText(this.textAt(selection.end, 1, 2)),
       twoAfter: document.getText(this.textAt(selection.end, 1, 3))
     };
 
     if (
       chars.twoBefore === '{{' &&
-      chars.firstChar !== ' ' &&
+      chars.threeBefore !== '{{ ' &&
       chars.twoAfter !== '--'
     ) {
       return 'double';
     }
 
-    if (chars.fourBefore === '{{ {' && chars.firstChar !== ' ') {
+    if (chars.fourBefore === '{{ {' && chars.oneBefore !== ' ') {
       return 'triple';
     }
 
-    if (chars.threeBefore === '{!!' && chars.firstChar !== ' ') {
+    if (chars.threeBefore === '{!!' && chars.oneBefore !== ' ') {
       return 'unescaped';
     }
 
-    if (chars.fiveBefore === '{{ --' && chars.firstChar === '-') {
+    if (chars.fiveBefore === '{{ --' && chars.oneBefore === '-') {
       return 'comment';
     }
 
