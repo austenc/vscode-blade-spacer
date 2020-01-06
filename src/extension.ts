@@ -1,156 +1,99 @@
 'use strict';
 
-import { window, SnippetString, Range, Position, Selection, Disposable, ExtensionContext, TextEditor, TextDocument } from 'vscode';
+import {
+  window,
+  workspace,
+  SnippetString,
+  Range,
+  ExtensionContext,
+  TextEditor
+} from 'vscode';
 
 export function activate(context: ExtensionContext) {
-    let spacer = new Spacer();
-    let controller = new SpacerController(spacer);
+  const triggers = ['{}', '!', '-', '{'];
+  const expressions = [
+    /({{)([^\s].*?)?(}})/,
+    /({!!)(.*?)?(})/,
+    /({{\s--)(.*?)?(}})/
+  ];
+  const spacer = new Spacer();
+  let tagType: number = -1;
 
-    context.subscriptions.push(spacer);
-    context.subscriptions.push(controller);
+  context.subscriptions.push(
+    workspace.onDidChangeTextDocument(e => {
+      let editor = window.activeTextEditor;
+      if (!editor) {
+        return;
+      }
+
+      let ranges: Array<Range> = [];
+      let offsets: Array<number> = [];
+
+      // changes (per line) come in right-to-left when we need them left-to-right
+      e.contentChanges.reverse().forEach(change => {
+        let charsBefore: number = 1;
+
+        if (triggers.indexOf(change.text) !== -1) {
+          if (!offsets[change.range.start.line]) {
+            offsets[change.range.start.line] = 0;
+          }
+
+          // some tags need more characters to be matched from the start
+          if (change.text === '!') {
+            charsBefore = 2;
+          } else if (change.text === '-') {
+            charsBefore = 4;
+          }
+
+          let start = change.range.start.translate(
+            0,
+            offsets[change.range.start.line] - charsBefore
+          );
+          let lineEnd = e.document.lineAt(start.line).range.end;
+          expressions.forEach((expression, index) => {
+            let tag = expression.exec(
+              e.document.getText(new Range(start, lineEnd))
+            );
+
+            if (tag) {
+              tagType = index;
+              ranges.push(new Range(start, start.translate(0, tag[0].length)));
+              offsets[start.line] += tag[1].length;
+            }
+          });
+        }
+      });
+
+      if (ranges.length > 0) {
+        spacer.replace(editor, tagType, ranges);
+        ranges = [];
+        tagType = -1;
+      }
+    })
+  );
 }
 
 class Spacer {
+  TAG_DOUBLE = 0;
+  TAG_UNESCAPED = 1;
+  TAG_COMMENT = 2;
 
-    public measurements(document: TextDocument, selection: Selection) {
-        return {
-            start: selection.start,
-            end: selection.end,
-            selected: document.getText(new Range(selection.start, selection.end)),
-            firstChar: document.getText(new Range(
-                selection.start, 
-                new Position(selection.start.line, selection.start.character + 1)
-            )),
-            twoBefore: document.getText(new Range(
-                new Position(selection.start.line, Math.max(selection.start.character - 2, 0)),
-                selection.start
-            )),
-            threeBefore: document.getText(new Range(
-                new Position(selection.start.line, Math.max(selection.start.character - 3, 0)),
-                selection.start
-            )),
-            fourBefore: document.getText(new Range(
-                new Position(selection.start.line, Math.max(selection.start.character - 4, 0)),
-                selection.start
-            )),
-            charAfter: document.getText(new Range(
-                selection.end,
-                new Position(selection.end.line, selection.end.character + 1),
-            )),
-            twoAfter: document.getText(new Range(
-                selection.end,
-                new Position(selection.end.line, selection.end.character + 2),
-            )),
-            
-
-        };
+  public replace(editor: TextEditor, tagType: number, ranges: Array<Range>) {
+    if (tagType === this.TAG_DOUBLE) {
+      editor.insertSnippet(
+        new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
+        ranges
+      );
+    } else if (tagType === this.TAG_UNESCAPED) {
+      editor.insertSnippet(
+        new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{}!]//g}} !!}$0'),
+        ranges
+      );
+    } else if (tagType === this.TAG_COMMENT) {
+      editor.insertSnippet(
+        new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/[{}- ]//g}} --}}$0'),
+        ranges
+      );
     }
-
-    public space(editor: TextEditor) {
-        let selections = editor.selections;
-        let document = editor.document;
-        let tagType = '';
-        let offsetEnd = 2;
-        
-        for (let i = 0; i < selections.length; i++) {    
-            
-            
-            let s = this.measurements(document, selections[i]);
-            if (s.twoBefore === '{{' && s.firstChar !== ' ' && s.twoAfter !== '--') {
-                tagType = 'double';                
-                if (s.twoAfter !== '}}') {
-                    offsetEnd = 0;
-                }
-            }
-
-            if (s.fourBefore === '{{ {' && s.firstChar !== ' ') {
-                tagType = 'triple';
-            }
-
-            if (s.threeBefore === '{!!' && s.firstChar !== ' ') {
-                tagType = 'unescaped';
-                offsetEnd = 1;
-
-                if (s.charAfter !== '}') {
-                    offsetEnd = 0;
-                }
-            }
-
-            if (s.fourBefore === '{{ -' && s.firstChar === ' ') {
-                tagType = 'comment';
-            }
-        }
-
-        if (tagType === 'double') {
-            let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character + offsetEnd);
-            });
-            editor.insertSnippet(new SnippetString("{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}$0"), allRanges);
-        }
-
-        if (tagType === 'doubleWithoutEnd') {
-            let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 2, value.end.line, value.end.character);
-            });
-            editor.insertSnippet(new SnippetString("{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}$0"), allRanges);
-        }
-
-        if (tagType === 'triple') {
-            let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 4, value.end.line, value.end.character + 4);
-            });
-            editor.insertSnippet(new SnippetString("{{{ ${1:${TM_SELECTED_TEXT/[\{\}\ ]/$1/g}} }}}$0"), allRanges);
-        }
-
-        if (tagType === 'unescaped') {
-            let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 3, value.end.line, value.end.character + offsetEnd);
-            });
-            editor.insertSnippet(new SnippetString("{!! ${1:${TM_SELECTED_TEXT/[!\{\}\ ]/$1/g}} !!}$0"), allRanges);
-        }
-
-        if (tagType === 'comment') {
-            let allRanges = selections.map(value => {
-                return new Range(value.start.line, value.start.character - 4, value.end.line, value.end.character + 3);
-            });
-            editor.insertSnippet(new SnippetString("{{-- ${1:${TM_SELECTED_TEXT/[\-\{\}\ ]/$1/g}} --}}$0"), allRanges, {undoStopBefore: false, undoStopAfter: true});
-        }
-
-    }
-
-    dispose() {
-    
-    }
-}
-
-class SpacerController {
-    private spacer: Spacer;
-    private disposable: Disposable;
-
-    constructor(spacer: Spacer) {
-        this.spacer = spacer;
-
-        let subscriptions: Disposable[] = [];
-        window.onDidChangeTextEditorSelection(this.onEvent, this, subscriptions);
-        window.onDidChangeActiveTextEditor(this.onEvent, this, subscriptions);
-
-        this.disposable = Disposable.from(...subscriptions);
-    }
-
-    private onEvent() {
-        const editor = window.activeTextEditor;
-
-        if (editor) {
-            this.spacer.space(editor);
-        }
-    }
-
-    public dispose() {
-        this.disposable.dispose();
-    }
-}
-
-
-// this method is called when your extension is deactivated
-export function deactivate() {
+  }
 }
