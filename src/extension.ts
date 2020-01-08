@@ -6,7 +6,9 @@ import {
   SnippetString,
   Range,
   ExtensionContext,
-  TextEditor
+  TextEditor,
+  TextDocument,
+  TextDocumentContentChangeEvent
 } from 'vscode'
 
 export function activate(context: ExtensionContext) {
@@ -14,7 +16,7 @@ export function activate(context: ExtensionContext) {
   const expressions = [
     /({{)([^\s].*?)?(}})/,
     /({!!)(.*?)?(})/,
-    /({{\s--)(.*?)?(}})/
+    /({{[\s]?--)(.*?)?(}})/
   ]
   const spacer = new Spacer()
   let tagType: number = -1
@@ -31,36 +33,37 @@ export function activate(context: ExtensionContext) {
 
       // changes (per line) come in right-to-left when we need them left-to-right
       e.contentChanges.reverse().forEach(change => {
-        let charsBefore: number = 1
-
         if (triggers.indexOf(change.text) !== -1) {
           if (!offsets[change.range.start.line]) {
             offsets[change.range.start.line] = 0
           }
 
-          // some tags need more characters to be matched from the start
-          if (change.text === '!') {
-            charsBefore = 2
-          } else if (change.text === '-') {
-            charsBefore = 4
-          }
-
           let start = change.range.start.translate(
             0,
-            offsets[change.range.start.line] - charsBefore
+            offsets[change.range.start.line] -
+              spacer.charsForChange(e.document, change)
           )
           let lineEnd = e.document.lineAt(start.line).range.end
-          expressions.forEach((expression, index) => {
-            let tag = expression.exec(
+          for (let i = 0; i < expressions.length; i++) {
+            // if we typed a - or a !, don't consider the "double" tag type
+            if (
+              ['-', '!'].indexOf(change.text) !== -1 &&
+              i === spacer.TAG_DOUBLE
+            ) {
+              continue
+            }
+
+            let theText = e.document.getText(new Range(start, lineEnd))
+            let tag = expressions[i].exec(
               e.document.getText(new Range(start, lineEnd))
             )
 
             if (tag) {
-              tagType = index
+              tagType = i
               ranges.push(new Range(start, start.translate(0, tag[0].length)))
               offsets[start.line] += tag[1].length
             }
-          })
+          }
         }
       })
 
@@ -78,6 +81,27 @@ class Spacer {
   TAG_UNESCAPED = 1
   TAG_COMMENT = 2
 
+  public charsForChange(
+    doc: TextDocument,
+    change: TextDocumentContentChangeEvent
+  ) {
+    if (change.text === '!') {
+      return 2
+    } else if (change.text === '-') {
+      let textRange = doc.getText(
+        new Range(
+          change.range.start.translate(0, -2),
+          change.range.start.translate(0, -1)
+        )
+      )
+      if (textRange === ' ') {
+        return 4
+      }
+      return 3
+    }
+    return 1
+  }
+
   public replace(editor: TextEditor, tagType: number, ranges: Array<Range>) {
     if (tagType === this.TAG_DOUBLE) {
       editor.insertSnippet(
@@ -86,12 +110,12 @@ class Spacer {
       )
     } else if (tagType === this.TAG_UNESCAPED) {
       editor.insertSnippet(
-        new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{}!]//g}} !!}$0'),
+        new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{} !]//g}} !!}$0'),
         ranges
       )
     } else if (tagType === this.TAG_COMMENT) {
       editor.insertSnippet(
-        new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/[{}- ]//g}} --}}$0'),
+        new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/(--)|[{} ]//g}} --}}$0'),
         ranges
       )
     }

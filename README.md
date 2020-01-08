@@ -15,6 +15,9 @@ Supports the following tags:
 
 ## Release Notes
 
+### 2.0.1
+- Fixed bug with comment and unescaped tag types when making from existing `{{` 
+
 ### 2.0.0
 - Dropped support for `{{{ }}}` tags 
 - Improved how extension activates, should be more performant
