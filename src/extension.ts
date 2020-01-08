@@ -53,7 +53,6 @@ export function activate(context: ExtensionContext) {
               continue
             }
 
-            let theText = e.document.getText(new Range(start, lineEnd))
             let tag = expressions[i].exec(
               e.document.getText(new Range(start, lineEnd))
             )
