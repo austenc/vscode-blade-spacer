@@ -32,7 +32,7 @@ export function activate(context: ExtensionContext) {
       let offsets: Array<number> = []
 
       // changes (per line) come in right-to-left when we need them left-to-right
-      e.contentChanges.reverse().forEach(change => {
+      e.contentChanges.slice().reverse().forEach(change => {
         if (triggers.indexOf(change.text) !== -1) {
           if (!offsets[change.range.start.line]) {
             offsets[change.range.start.line] = 0
