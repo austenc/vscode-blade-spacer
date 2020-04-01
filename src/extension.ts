@@ -14,8 +14,8 @@ import {
 export function activate(context: ExtensionContext) {
   const triggers = ['{}', '!', '-', '{']
   const expressions = [
-    /({{)([^\s].*?)?(}})/,
-    /({!!)(.*?)?(})/,
+    /({{)([^\s].*?)?(}}?)/,
+    /({!!)(.*?)?(}?)/,
     /({{[\s]?--)(.*?)?(}})/
   ]
   const spacer = new Spacer()
@@ -32,39 +32,42 @@ export function activate(context: ExtensionContext) {
       let offsets: Array<number> = []
 
       // changes (per line) come in right-to-left when we need them left-to-right
-      e.contentChanges.slice().reverse().forEach(change => {
-        if (triggers.indexOf(change.text) !== -1) {
-          if (!offsets[change.range.start.line]) {
-            offsets[change.range.start.line] = 0
-          }
-
-          let start = change.range.start.translate(
-            0,
-            offsets[change.range.start.line] -
-              spacer.charsForChange(e.document, change)
-          )
-          let lineEnd = e.document.lineAt(start.line).range.end
-          for (let i = 0; i < expressions.length; i++) {
-            // if we typed a - or a !, don't consider the "double" tag type
-            if (
-              ['-', '!'].indexOf(change.text) !== -1 &&
-              i === spacer.TAG_DOUBLE
-            ) {
-              continue
+      e.contentChanges
+        .slice()
+        .reverse()
+        .forEach(change => {
+          if (triggers.indexOf(change.text) !== -1) {
+            if (!offsets[change.range.start.line]) {
+              offsets[change.range.start.line] = 0
             }
 
-            let tag = expressions[i].exec(
-              e.document.getText(new Range(start, lineEnd))
+            let start = change.range.start.translate(
+              0,
+              offsets[change.range.start.line] -
+                spacer.charsForChange(e.document, change)
             )
+            let lineEnd = e.document.lineAt(start.line).range.end
+            for (let i = 0; i < expressions.length; i++) {
+              // if we typed a - or a !, don't consider the "double" tag type
+              if (
+                ['-', '!'].indexOf(change.text) !== -1 &&
+                i === spacer.TAG_DOUBLE
+              ) {
+                continue
+              }
 
-            if (tag) {
-              tagType = i
-              ranges.push(new Range(start, start.translate(0, tag[0].length)))
-              offsets[start.line] += tag[1].length
+              let tag = expressions[i].exec(
+                e.document.getText(new Range(start, lineEnd))
+              )
+
+              if (tag) {
+                tagType = i
+                ranges.push(new Range(start, start.translate(0, tag[0].length)))
+                offsets[start.line] += tag[1].length
+              }
             }
           }
-        }
-      })
+        })
 
       if (ranges.length > 0) {
         spacer.replace(editor, tagType, ranges)

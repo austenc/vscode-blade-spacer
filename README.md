@@ -18,6 +18,11 @@ Supports the following tags:
 
 ## Release Notes
 
+### 2.1.0
+
+- Automatically enable `editor.autoClosingBrackets` for blade and html language types
+- Fixed greedy regex for `{{ }}` and `{!! !!}` tag pairs - #11
+
 ### 2.0.2
 
 - Fixed bug causing issues with other extensions, thanks @KapitanOczywisty!

@@ -12,6 +12,16 @@
   "categories": [
     "Other"
   ],
+  "contributes": {
+    "configurationDefaults": {
+      "[html]": {
+        "editor.autoClosingBrackets": "always"
+      },
+      "[blade]": {
+        "editor.autoClosingBrackets": "always"
+      }
+    }
+  },
   "activationEvents": [
     "*"
   ],
