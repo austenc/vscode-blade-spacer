@@ -14,8 +14,8 @@ import {
 export function activate(context: ExtensionContext) {
   const triggers = ['{}', '!', '-', '{']
   const expressions = [
-    /({{)([^\s].*?)?(}}?)/,
-    /({!!)(.*?)?(}?)/,
+    /({{(?!\s|-))(.*?)(}})/,
+    /({!!(?!\s))(.*?)?(}?)/,
     /({{[\s]?--)(.*?)?(}})/
   ]
   const spacer = new Spacer()
