@@ -18,6 +18,10 @@ Supports the following tags:
 
 ## Release Notes
 
+### 2.1.1
+
+- Fixed issues noted in [#14](https://github.com/austenc/vscode-blade-spacer/issues/14)
+
 ### 2.1.0
 
 - Automatically enable `editor.autoClosingBrackets` for blade and html language types
