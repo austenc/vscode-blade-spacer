@@ -14,8 +14,8 @@ import {
 export function activate(context: ExtensionContext) {
   const triggers = ['{}', '!', '-', '{']
   const expressions = [
-    /({{)([^\s].*?)?(}}?)/,
-    /({!!)(.*?)?(}?)/,
+    /({{(?!\s|-))(.*?)(}})/,
+    /({!!(?!\s))(.*?)?(}?)/,
     /({{[\s]?--)(.*?)?(}})/
   ]
   const spacer = new Spacer()
@@ -46,13 +46,25 @@ export function activate(context: ExtensionContext) {
               offsets[change.range.start.line] -
                 spacer.charsForChange(e.document, change)
             )
+
             let lineEnd = e.document.lineAt(start.line).range.end
+
             for (let i = 0; i < expressions.length; i++) {
               // if we typed a - or a !, don't consider the "double" tag type
               if (
-                ['-', '!'].indexOf(change.text) !== -1 &&
-                i === spacer.TAG_DOUBLE
+                i === spacer.TAG_DOUBLE &&
+                ['-', '!'].indexOf(change.text) !== -1
               ) {
+                continue
+              }
+
+              // Only look at unescaped tags if we need to
+              if (i === spacer.TAG_UNESCAPED && change.text !== '!') {
+                continue
+              }
+
+              // Only look at unescaped tags if we need to
+              if (i === spacer.TAG_COMMENT && change.text !== '-') {
                 continue
               }
 
