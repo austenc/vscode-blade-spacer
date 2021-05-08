@@ -7,7 +7,7 @@
   "repository": "https://github.com/austenc/vscode-blade-spacer",
   "icon": "img/icon.png",
   "engines": {
-    "vscode": "^1.21.0"
+    "vscode": "^1.56.0"
   },
   "categories": [
     "Other"
