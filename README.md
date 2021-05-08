@@ -18,6 +18,11 @@ Supports the following tags:
 
 ## Release Notes
 
+### 2.1.3
+
+- Fixed npm vulnerabilities
+- Use async/await to fix interaction with some extensions - #17
+
 ### 2.1.2
 
 - Fixed npm vulnerability
