@@ -8,7 +8,8 @@ import {
   ExtensionContext,
   TextEditor,
   TextDocument,
-  TextDocumentContentChangeEvent
+  TextDocumentContentChangeEvent,
+  commands
 } from 'vscode'
 
 export function activate(context: ExtensionContext) {
@@ -22,7 +23,7 @@ export function activate(context: ExtensionContext) {
   let tagType: number = -1
 
   context.subscriptions.push(
-    workspace.onDidChangeTextDocument(e => {
+    workspace.onDidChangeTextDocument(async e => {
       let editor = window.activeTextEditor
       if (!editor) {
         return
@@ -82,7 +83,11 @@ export function activate(context: ExtensionContext) {
         })
 
       if (ranges.length > 0) {
-        spacer.replace(editor, tagType, ranges)
+        await spacer.replace(editor, tagType, ranges)
+        try {
+          await commands.executeCommand('extension.vim_escape')
+          await commands.executeCommand("extension.vim_insert");
+        } catch (error) {}
         ranges = []
         tagType = -1
       }
@@ -118,17 +123,17 @@ class Spacer {
 
   public replace(editor: TextEditor, tagType: number, ranges: Array<Range>) {
     if (tagType === this.TAG_DOUBLE) {
-      editor.insertSnippet(
+      return editor.insertSnippet(
         new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
         ranges
       )
     } else if (tagType === this.TAG_UNESCAPED) {
-      editor.insertSnippet(
+      return editor.insertSnippet(
         new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{} !]//g}} !!}$0'),
         ranges
       )
     } else if (tagType === this.TAG_COMMENT) {
-      editor.insertSnippet(
+      return editor.insertSnippet(
         new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/(--)|[{} ]//g}} --}}$0'),
         ranges
       )
