@@ -13,11 +13,13 @@ import {
 } from 'vscode'
 
 export function activate(context: ExtensionContext) {
-  const triggers = ['{}', '!', '-', '{']
+  const triggers = ['{}', '!', '-', '{', '%', '#']
   const expressions = [
     /({{(?!\s|-))(.*?)(}})/,
     /({!!(?!\s))(.*?)?(}?)/,
-    /({{[\s]?--)(.*?)?(}})/
+    /({{[\s]?--)(.*?)?(}})/,
+    /({%(?!\s))(.*?)?(}?)/,
+    /({#(?!\s))(.*?)?(}?)/,
   ]
   const spacer = new Spacer()
   let tagType: number = -1
@@ -99,6 +101,8 @@ class Spacer {
   TAG_DOUBLE = 0
   TAG_UNESCAPED = 1
   TAG_COMMENT = 2
+  TAG_TWIG_PER = 3
+  TAG_TWIG_HASH = 4
 
   public charsForChange(
     doc: TextDocument,
@@ -135,6 +139,16 @@ class Spacer {
     } else if (tagType === this.TAG_COMMENT) {
       return editor.insertSnippet(
         new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/(--)|[{} ]//g}} --}}$0'),
+        ranges
+      )
+    } else if (tagType === this.TAG_TWIG_PER) {
+      return editor.insertSnippet(
+        new SnippetString('{% $1 %}$0'),
+        ranges
+      )
+    } else if (tagType === this.TAG_TWIG_HASH) {
+      return editor.insertSnippet(
+        new SnippetString('{# $1 #}$0'),
         ranges
       )
     }
