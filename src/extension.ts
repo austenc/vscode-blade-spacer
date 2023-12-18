@@ -44,11 +44,15 @@ export function activate(context: ExtensionContext) {
               offsets[change.range.start.line] = 0
             }
 
-            let start = change.range.start.translate(
-              0,
-              offsets[change.range.start.line] -
-                spacer.charsForChange(e.document, change)
-            )
+            let startOffset = offsets[change.range.start.line] - spacer.charsForChange(e.document, change)
+            let start = change.range.start
+            try {
+              start = start.translate(0, startOffset)
+            } catch (error) {
+              // VS Code doesn't like negative numbers passed
+              // to translate (even though it works fine), so
+              // this block prevents debug console errors
+            }
 
             let lineEnd = e.document.lineAt(start.line).range.end
 
@@ -95,7 +99,10 @@ export function activate(context: ExtensionContext) {
             await commands.executeCommand('extension.vim_left');
           }
           await commands.executeCommand('extension.vim_insert');
-        } catch (error) {}
+        } catch (error) {
+          // We don't care if this fails, because it means the user
+          // does NOT have the VSCodeVim extension installed
+        }
         ranges = []
         tagType = -1
       }
@@ -117,12 +124,19 @@ class Spacer {
     if (change.text === '!') {
       return 2
     } else if (change.text === '-') {
-      let textRange = doc.getText(
-        new Range(
-          change.range.start.translate(0, -2),
-          change.range.start.translate(0, -1)
-        )
-      )
+      let start = change.range.start
+      let end = change.range.start
+
+      try {
+        start = start.translate(0, -2)
+        end = end.translate(0, -1)
+      } catch (error) {
+        // VS Code doesn't like negative numbers passed
+        // to translate (even though it works fine), so
+        // this block prevents debug console errors
+      }
+
+      let textRange = doc.getText(new Range(start, end))
       if (textRange === ' ') {
         return 4
       }
