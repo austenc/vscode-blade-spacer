@@ -9,14 +9,23 @@ Supports the following tags:
 - `{{ }}`
 - `{!! !!}`
 - `{{-- --}}`
+- `{% %}`
+- `{# #}`
 
 ![Extension Preview](img/preview.gif)
 
 ## Known Issues
 
-- Wrapping selected text with `{!! !!}` and `{{-- --}}` tags doesn't work. PR welcomed!
+- Wrapping selected text with `{!! !!}`, `{{-- --}}`, `{% %}`, or `{# #}` tags doesn't work
 
 ## Release Notes
+
+### 2.2.0
+
+- Fix npm install issues
+- Fix console errors when translating selections
+- Add support for Twig syntax `{# #}` and `{% %}`
+
 
 ### 2.1.3
 
