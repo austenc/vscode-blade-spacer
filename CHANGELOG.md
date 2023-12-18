@@ -1,6 +1,9 @@
 # Change Log
 ### [Unreleased]
 
+- Fix npm install issues
+- Support Twig syntax `{# #}` and `{% %}`
+
 ### 2.1.3
 
 - Fixed npm vulnerabilities
