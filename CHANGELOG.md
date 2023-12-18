@@ -1,6 +1,8 @@
 # Change Log
 ### [Unreleased]
 
+### 2.2.0
+
 - Fix npm install issues
 - Fix console errors when translating selections
 - Add support for Twig syntax `{# #}` and `{% %}`

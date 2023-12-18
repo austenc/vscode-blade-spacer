@@ -9,6 +9,8 @@ Supports the following tags:
 - `{{ }}`
 - `{!! !!}`
 - `{{-- --}}`
+- `{% %}`
+- `{# #}`
 
 ![Extension Preview](img/preview.gif)
 
@@ -17,6 +19,13 @@ Supports the following tags:
 - Wrapping selected text with `{!! !!}`, `{{-- --}}`, `{% %}`, or `{# #}` tags doesn't work
 
 ## Release Notes
+
+### 2.2.0
+
+- Fix npm install issues
+- Fix console errors when translating selections
+- Add support for Twig syntax `{# #}` and `{% %}`
+
 
 ### 2.1.3
 
