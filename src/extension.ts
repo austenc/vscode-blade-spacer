@@ -99,7 +99,10 @@ export function activate(context: ExtensionContext) {
             await commands.executeCommand('extension.vim_left');
           }
           await commands.executeCommand('extension.vim_insert');
-        } catch (error) {}
+        } catch (error) {
+          // We don't care if this fails, because it means the user
+          // does NOT have the VSCodeVim extension installed
+        }
         ranges = []
         tagType = -1
       }
