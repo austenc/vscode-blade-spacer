@@ -14,7 +14,7 @@ Supports the following tags:
 
 ## Known Issues
 
-- Wrapping selected text with `{!! !!}` and `{{-- --}}` tags doesn't work. PR welcomed!
+- Wrapping selected text with `{!! !!}`, `{{-- --}}`, `{% %}`, or `{# #}` tags doesn't work
 
 ## Release Notes
 

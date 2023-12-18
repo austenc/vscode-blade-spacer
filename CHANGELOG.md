@@ -2,7 +2,8 @@
 ### [Unreleased]
 
 - Fix npm install issues
-- Support Twig syntax `{# #}` and `{% %}`
+- Fix console errors when translating selections
+- Add support for Twig syntax `{# #}` and `{% %}`
 
 ### 2.1.3
 
