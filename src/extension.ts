@@ -141,6 +141,8 @@ class Spacer {
   }
 
   public replace(editor: TextEditor, tagType: number, ranges: Array<Range>) {
+    const twigEnabled = workspace.getConfiguration('bladeSpacer').enableTwig
+
     if (tagType === this.TAG_DOUBLE) {
       return editor.insertSnippet(
         new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
@@ -156,12 +158,12 @@ class Spacer {
         new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/(--)|[{} ]//g}} --}}$0'),
         ranges
       )
-    } else if (tagType === this.TAG_TWIG_PER) {
+    } else if (twigEnabled && tagType === this.TAG_TWIG_PER) {
       return editor.insertSnippet(
         new SnippetString('{% $1 %}$0'),
         ranges
       )
-    } else if (tagType === this.TAG_TWIG_HASH) {
+    } else if (twigEnabled && tagType === this.TAG_TWIG_HASH) {
       return editor.insertSnippet(
         new SnippetString('{# $1 #}$0'),
         ranges
