@@ -91,14 +91,9 @@ export function activate(context: ExtensionContext) {
       if (ranges.length > 0) {
         await spacer.replace(editor, tagType, ranges)
         try {
-          await commands.executeCommand('extension.vim_escape');
-          if (tagType === spacer.TAG_UNESCAPED || tagType === spacer.TAG_TWIG_PER || tagType == spacer.TAG_TWIG_HASH) {
-            await commands.executeCommand('extension.vim_right');
-          } else if (tagType === spacer.TAG_COMMENT) {
-            await commands.executeCommand('extension.vim_left');
-            await commands.executeCommand('extension.vim_left');
-          }
-          await commands.executeCommand('extension.vim_insert');
+          await commands.executeCommand('extension.vim_escape')
+          await commands.executeCommand('extension.vim_right')
+          await commands.executeCommand('extension.vim_insert')
         } catch (error) {
           // We don't care if this fails, because it means the user
           // does NOT have the VSCodeVim extension installed

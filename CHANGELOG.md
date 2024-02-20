@@ -1,6 +1,8 @@
 # Change Log
 ### [Unreleased]
 
+- Fixed cursor placement when VsCodeVim is also installed
+
 ### 2.2.0
 
 - Fix npm install issues
