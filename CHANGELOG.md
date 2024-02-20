@@ -1,6 +1,9 @@
 # Change Log
 ### [Unreleased]
 
+### 2.3.0
+
+- Added new setting `bladeSpacer.enableTwig` to toggle support for Twig templates (`{%  %}` and `{#  #}`)
 - Fixed cursor placement when VsCodeVim is also installed
 
 ### 2.2.0

@@ -20,6 +20,17 @@
       "[blade]": {
         "editor.autoClosingBrackets": "always"
       }
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Laravel Blade Spacer",
+      "properties": {
+        "bladeSpacer.enableTwig": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable support for Twig templating tags (e.g. {% %} or {#  #})"
+        }
+      }
     }
   },
   "activationEvents": [
