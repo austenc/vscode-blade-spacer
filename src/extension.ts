@@ -90,14 +90,6 @@ export function activate(context: ExtensionContext) {
 
       if (ranges.length > 0) {
         await spacer.replace(editor, tagType, ranges)
-        try {
-          await commands.executeCommand('extension.vim_escape')
-          await commands.executeCommand('extension.vim_right')
-          await commands.executeCommand('extension.vim_insert')
-        } catch (error) {
-          // We don't care if this fails, because it means the user
-          // does NOT have the VSCodeVim extension installed
-        }
         ranges = []
         tagType = -1
       }
@@ -147,27 +139,49 @@ class Spacer {
       return editor.insertSnippet(
         new SnippetString('{{ ${1:${TM_SELECTED_TEXT/[{}]//g}} }}$0'),
         ranges
-      )
+      ).then(() => {
+        this.adjustCursor(tagType);
+      });
     } else if (tagType === this.TAG_UNESCAPED) {
       return editor.insertSnippet(
         new SnippetString('{!! ${1:${TM_SELECTED_TEXT/[{} !]//g}} !!}$0'),
         ranges
-      )
+      ).then(() => {
+        this.adjustCursor(tagType);
+      });
     } else if (tagType === this.TAG_COMMENT) {
       return editor.insertSnippet(
         new SnippetString('{{-- ${1:${TM_SELECTED_TEXT/(--)|[{} ]//g}} --}}$0'),
         ranges
-      )
+      ).then(() => {
+        this.adjustCursor(tagType);
+      });
     } else if (twigEnabled && tagType === this.TAG_TWIG_PER) {
       return editor.insertSnippet(
         new SnippetString('{% $1 %}$0'),
         ranges
-      )
+      ).then(() => {
+        this.adjustCursor(tagType);
+      });
     } else if (twigEnabled && tagType === this.TAG_TWIG_HASH) {
       return editor.insertSnippet(
         new SnippetString('{# $1 #}$0'),
         ranges
-      )
+      ).then(() => {
+        this.adjustCursor(tagType);
+      });
+    }
+  }
+
+  public adjustCursor(tagType: number) {
+    try {
+      commands.executeCommand('extension.vim_right');
+      if (tagType > 2) {
+        commands.executeCommand('extension.vim_left');
+      }
+    } catch (error) {
+      // We don't care if this fails, because it means the user
+      // does NOT have the VSCodeVim extension installed
     }
   }
 }
