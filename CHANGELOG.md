@@ -1,5 +1,9 @@
-# Change Log
+# Changelog
 ### [Unreleased]
+
+### 2.3.1
+
+- Attempt to fix tricky race condition with cursor placement when using VSCodeVim extension and Cursor.sh editor
 
 ### 2.3.0
 
